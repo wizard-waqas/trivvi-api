@@ -4,8 +4,10 @@ from youtube_transcript_api.formatters import TextFormatter
 import re
 from PyPDF2 import PdfReader
 import docx2txt
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 
 def convert_pdf_to_txt(file):
