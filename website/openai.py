@@ -7,7 +7,7 @@ generate_quiz = Blueprint("generatequiz", __name__)
 openai.api_key = "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"
 
 
-@generate_quiz.route('/true-false', methods=['POST'])
+@generate_quiz.route('/tf', methods=['POST'])
 def generate_tf_quiz():
     if request.method != 'POST':
         return jsonify({"message": "Method Not Allowed!"}), 405
@@ -61,7 +61,7 @@ def generate_tf_quiz():
     return jsonify({"questions": questions, "answerKey": answerKey}), 200
 
 
-@generate_quiz.post("/multiple-choice")
+@generate_quiz.post("/mc")
 def generate_mc_quiz():
     if request.method != 'POST':
         return jsonify({"message": "Method Not Allowed!"}), 405
