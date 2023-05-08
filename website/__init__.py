@@ -5,6 +5,7 @@ from flask_cors import CORS
 
 from .parsepdf import parsepdf
 from .youtube import youtube
+from .openai import generate_quiz
 
 
 def create_app():
@@ -16,5 +17,6 @@ def create_app():
 
     app.register_blueprint(youtube, url_prefix="/api/youtube")
     app.register_blueprint(parsepdf, url_prefix="/api/parsepdf")
+    app.register_blueprint(generate_quiz, url_prefix="/api/generate-quiz")
 
     return app

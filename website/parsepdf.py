@@ -27,7 +27,7 @@ def convert_docx_to_txt(file):
 
 
 # This function will take a file and convert it to text and return it
-@app.route("/", methods=["POST"])
+@parsepdf.route("/", methods=["POST"])
 def convert():
     try:
         uploaded_file = request.files[
