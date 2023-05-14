@@ -1,37 +1,29 @@
 from flask import Blueprint, request, jsonify
 import openai
 import re
-import logging
 
 generate_quiz = Blueprint("generatequiz", __name__)
 openai.api_key = "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"
 
 
-@generate_quiz.route('/tf', methods=['POST'])
-def generate_tf_quiz():
+@generate_quiz.post("/tf")
+def generate_tf_question():
     if request.method != 'POST':
         return jsonify({"message": "Method Not Allowed!"}), 405
 
     data = request.json
-    numberOfQuestions = data.get('numberOfQuestions')
-    quizData = data.get('quizData')
-    joinCode = data.get('joinCode')
+    keyPoint = data.get('keyPoint')
 
     quizResponse = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
             {
                 "role": "system",
-                "content": f"Generate a true or false quiz with {numberOfQuestions} questions based on this "
-                           f"information: '{quizData}'. Each question will have an answer of T or F, do not write out "
-                           f"the whole word only use the letter. The format of the quiz should be as follows and "
-                           f"nothing else:\n"
-                           "1. Question 1\n"
-                           "Answer: T/F\n"
-                           "2. Question 2\n"
-                           "Answer: T/F\n"
-                           "3. Question 3\n"
-                           "Answer: T/F\n"
+                "content": f"Generate 1 true or false question and answer key based on this: '{keyPoint}'. "
+                           f"Each question will have an answer of T or F, do not write out the whole word only use the "
+                           f"letter. The format of the question should be as follows and nothing else:\n"
+                           "1. [insert question text]\n"
+                           "Answer: [insert T or F]\n"
             }
         ],
         max_tokens=2000,
@@ -39,65 +31,46 @@ def generate_tf_quiz():
     )
 
     quizResponseText = quizResponse.choices[0].message.content
-
-    questions = []
-    answerKey = []
-
     lines = quizResponseText.split("\n")
-    currentQuestion = {"query": ""}
+
+    question = {"query": ""}
+    answerKey = ""
 
     for line in lines:
         if line.startswith("\n") or line == "":
             continue
 
-        if re.match("^[0-9]+", line):
-            currentQuestion["query"] = line
+        if re.match("^[0-9]+", line):  # if line starts with a number
+            question["query"] = re.sub(r'^\d+\.\s*', '', line)  # remove the number and period
         elif line.startswith("Answer"):
             answer = line.split(":")[1].strip()
-            answerKey.append(answer)
-            questions.append(currentQuestion)
-            currentQuestion = {"query": ""}
+            answerKey = answer
 
-    return jsonify({"questions": questions, "answerKey": answerKey}), 200
+    return jsonify({"question": question, "answerKey": answerKey}), 200
 
 
 @generate_quiz.post("/mc")
-def generate_mc_quiz():
+def generate_mc_question():
     if request.method != 'POST':
         return jsonify({"message": "Method Not Allowed!"}), 405
 
     data = request.json
-    numberOfQuestions = data.get('numberOfQuestions')
-    quizData = data.get('quizData')
-    joinCode = data.get('joinCode')
+    keyPoint = data.get('keyPoint')
 
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
             {
                 "role": "system",
-                "content": f"I want you to generate a multiple choice quiz with {numberOfQuestions} questions "
-                           f"based on this information: '{quizData}'. If the number of questions exceeds {numberOfQuestions}, "
-                           f"follow the same format but add more questions. "
-                           f"The format of the quiz should be as follows and nothing else:\n"
-                           f"1. Question 1\n"
-                           f"A. AnswerChoice\n"
-                           f"B. AnswerChoice\n"
-                           f"C. AnswerChoice\n"
-                           f"D. AnswerChoice\n"
-                           f"Answer: _\n"
-                           f"2. Question 2\n"
-                           f"A. AnswerChoice\n"
-                           f"B. AnswerChoice\n"
-                           f"C. AnswerChoice\n"
-                           f"D. AnswerChoice\n"
-                           f"Answer: _\n"
-                           f"3. Question 3\n"
-                           f"A. AnswerChoice\n"
-                           f"B. AnswerChoice\n"
-                           f"C. AnswerChoice\n"
-                           f"D. AnswerChoice\n"
-                           f"Answer: _\n",
+                "content": f"Generate 1 multiple choice question and answer key based on this: '{keyPoint}'. "
+                           f"The format of the AnswerKey should be a single letter and nothing else:\n"
+                           f"The format of the question should be as follows and nothing else. "
+                           f"1. [insert question text]\n"
+                           f"A. [insert answer choice 1]\n"
+                           f"B. [insert answer choice 2]\n"
+                           f"C. [insert answer choice 3]\n"
+                           f"D. [insert answer choice 4]\n"
+                           f"AnswerKey: [insert A B C or D]\n",
             }
         ],
         max_tokens=2000,
@@ -107,30 +80,21 @@ def generate_mc_quiz():
     quiz_response_text = response.choices[0].message.content
     lines = quiz_response_text.split("\n")
 
-    questions = []
-    answer_key = []
-    current_question = {"query": "", "answers": []}
+    question = {"query": "", "answers": []}
+    answer_key = ""
 
     for line in lines:
         if line.startswith("\n") or line == "":
             continue
 
-        if re.match("^[0-9]+", line):
-            if current_question["query"]:
-                questions.append(current_question)
-
-            current_question = {
-                "query": line,
-                "answers": []
-            }
+        if re.match("^[0-9]+", line):  # if line starts with a number
+            question["query"] = re.sub(r'^\d+\.\s*', '', line)  # remove the number and period
         elif line.startswith("Answer"):
-            answer_key.append(line[-1])
+            answer_key = line[-1]
         elif line.startswith("A") or line.startswith("B") or line.startswith("C") or line.startswith("D"):
-            current_question["answers"].append(line)
+            question["answers"].append(line)
 
-    questions.append(current_question)
-
-    return {"questions": questions, "answer_key": answer_key}
+    return {"question": question, "answerKey": answer_key}
 
 
 @generate_quiz.post("/key-points")
@@ -139,21 +103,22 @@ def generate_key_points():
         return jsonify({"message": "Method Not Allowed!"}), 405
 
     data = request.json
-    numberOfKeyPoints = data.get('numberOfKeyPoints')
-    quizData = data.get('quizData')
+    number_of_key_points = data.get('numberOfKeyPoints')
+    quiz_data = data.get('quizData')
 
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
             {
                 "role": "system",
-                "content": f"I want you to generate a list of {numberOfKeyPoints} key points based on this information: '{quizData}'"
+                "content": f"Generate a list of {number_of_key_points} key points based on this information: '{quiz_data}'"
             }
         ],
         max_tokens=2000,
-        temperature=0.5
+        temperature=0.3
     )
 
-    print(response.choices[0].message.content)
+    lines = response.choices[0].message.content.split("\n")
+    list_of_key_points = [re.sub(r'^\d+\.\s*', '', line) for line in lines]  # remove number from beginning of line
 
-    return {"keyPoints": response.choices[0].message.content.split("\n")}
+    return {"keyPoints": list_of_key_points}
