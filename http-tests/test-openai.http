@@ -1,0 +1,44 @@
+### generate a true false quiz from localhost, 1.5 seconds to generate each question
+POST http://127.0.0.1:5000/api/ai-generate/tf
+Content-Type: application/json
+
+{
+  "quizData": "ice cream",
+  "numberOfQuestions": 4
+}
+
+### generate a multiple choice quiz from localhost, 3 seconds to generate each question
+POST http://127.0.0.1:5000/api/ai-generate/mc
+Content-Type: application/json
+
+{
+  "quizData": "ice cream",
+  "numberOfQuestions": 6
+}
+
+### generate a true false quiz from prod route, 2 seconds to generate each question
+POST https://trivvi-6a057.uc.r.appspot.com/api/ai-generate/tf
+Content-Type: application/json
+
+{
+  "quizData": "ice cream",
+  "numberOfQuestions": 10
+}
+
+### generate a multiple choice quiz from prod route, 3 seconds to generate each question
+POST https://trivvi-6a057.uc.r.appspot.com/api/ai-generate/mc
+Content-Type: application/json
+
+{
+  "quizData": "ice cream",
+  "numberOfQuestions": 8
+}
+
+### generate n key points about a given topic, takes 1.6 seconds to generate each key point
+POST http://127.0.0.1:5000/api/ai-generate/key-points
+Content-Type: application/json
+
+{
+  "quizData": "ice cream",
+  "numberOfKeyPoints": 5
+}
