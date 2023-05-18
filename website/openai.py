@@ -35,20 +35,25 @@ def generate_tf_question():
     quizResponseText = quizResponse.choices[0].message.content
     lines = quizResponseText.split("\n")
 
-    question = {"query": ""}
-    answerKey = ""
+    questions = []
+    answerKey = []
+
+    current_question: any = {"query": ""}
 
     for line in lines:
         if line.startswith("\n") or line == "":
             continue
 
-        if re.match("^[0-9]+", line):  # if line starts with a number
-            question["query"] = re.sub(r'^\d+\.\s*', '', line)  # remove the number and period
+        if re.match(r'^[0-9]+', line):
+            query_text = re.sub(r'^\d+\.\s*', '', line)  # remove the number and period
+            current_question["query"] = query_text
         elif line.startswith("Answer"):
             answer = line.split(":")[1].strip()
-            answerKey = answer
+            answerKey.append(answer)
+            questions.append(current_question)
+            current_question = {"query": ""}
 
-    return jsonify({"question": question, "answerKey": answerKey}), 200
+    return jsonify({"questions": questions, "answerKey": answerKey}), 200
 
 
 @generate_quiz.post("/mc")
@@ -84,21 +89,31 @@ def generate_mc_question():
     quiz_response_text = response.choices[0].message.content
     lines = quiz_response_text.split("\n")
 
-    question = {"query": "", "answers": []}
-    answer_key = ""
+    questions = []
+    answer_key = []
+    current_question = {'query': "", 'answers': []}
 
     for line in lines:
         if line.startswith("\n") or line == "":
             continue
 
-        if re.match("^[0-9]+", line):  # if line starts with a number
-            question["query"] = re.sub(r'^\d+\.\s*', '', line)  # remove the number and period
-        elif line.startswith("Answer"):
-            answer_key = line[-1]
-        elif line.startswith("A") or line.startswith("B") or line.startswith("C") or line.startswith("D"):
-            question["answers"].append(line)
+        if re.match(r'^[0-9]+', line):
+            if current_question['query']:
+                questions.append(current_question)
 
-    return {"question": question, "answerKey": answer_key}
+            query_text = re.sub(r'^\d+\.\s*', '', line)  # remove the number and period
+            current_question = {
+                'query': query_text,
+                'answers': []
+            }
+        elif line.startswith("Answer"):
+            answer_key.append(line[-1])
+        elif line[0] in ["A", "B", "C", "D"]:
+            current_question['answers'].append(line)
+
+    questions.append(current_question)
+
+    return {"questions": questions, "answerKey": answer_key}
 
 
 @generate_quiz.post("/key-points")
