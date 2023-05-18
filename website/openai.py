@@ -12,16 +12,18 @@ def generate_tf_question():
         return jsonify({"message": "Method Not Allowed!"}), 405
 
     data = request.json
-    keyPoint = data.get('keyPoint')
+    quizData = data.get('quizData')
+    numberOfQuestions = data.get("numberOfQuestions")
 
     quizResponse = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
             {
                 "role": "system",
-                "content": f"Generate 1 true or false question and answer key based on this: '{keyPoint}'. "
-                           f"Each question will have an answer of T or F, do not write out the whole word only use the "
-                           f"letter. The format of the question should be as follows and nothing else:\n"
+                "content": f"Generate a true or false quiz with {numberOfQuestions} questions "
+                           f"based on this information: '{quizData}'. Each question will have an answer of T or F, "
+                           f"do not write out the whole word only use the letter. "
+                           f"The format of each question should be as follows and nothing else:\n"
                            "1. [insert question text]\n"
                            "Answer: [insert T or F]\n"
             }
@@ -55,22 +57,24 @@ def generate_mc_question():
         return jsonify({"message": "Method Not Allowed!"}), 405
 
     data = request.json
-    keyPoint = data.get('keyPoint')
+    quizData = data.get('quizData')
+    numberOfQuestions = data.get("numberOfQuestions")
 
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
             {
                 "role": "system",
-                "content": f"Generate 1 multiple choice question and answer key based on this: '{keyPoint}'. "
-                           f"The format of the AnswerKey should be a single letter and nothing else:\n"
-                           f"The format of the question should be as follows and nothing else. "
+                "content": f"Generate a multiple choice quiz with {numberOfQuestions} questions "
+                           f"based on this information: '{quizData}'. "
+                           f"The format of the Answer should be a single letter and nothing else.\n"
+                           f"The format of each question should be as follows and nothing else: "
                            f"1. [insert question text]\n"
                            f"A. [insert answer choice 1]\n"
                            f"B. [insert answer choice 2]\n"
                            f"C. [insert answer choice 3]\n"
                            f"D. [insert answer choice 4]\n"
-                           f"AnswerKey: [insert A B C or D]\n",
+                           f"Answer: [insert A B C or D]\n",
             }
         ],
         max_tokens=2000,
