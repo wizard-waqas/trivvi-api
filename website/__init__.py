@@ -1,6 +1,6 @@
 """ website package initializer  """
 
-from flask import Flask
+from flask import Flask, request, Response
 from flask_cors import CORS
 
 from .parsepdf import parsepdf
@@ -18,5 +18,10 @@ def create_app():
     app.register_blueprint(youtube, url_prefix="/api/youtube")
     app.register_blueprint(parsepdf, url_prefix="/api/parsepdf")
     app.register_blueprint(generate_quiz, url_prefix="/api/ai-generate")
+
+    @app.before_request
+    def basic_authentication():
+        if request.method.lower() == 'options':
+            return Response()
 
     return app
