@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, make_response
 import openai
 import re
 
@@ -141,3 +141,27 @@ def generate_key_points():
     list_of_key_points = [re.sub(r'^\d+\.\s*', '', line) for line in lines]  # remove number from beginning of line
 
     return {"keyPoints": list_of_key_points}
+
+
+@generate_quiz.post("/summarize")
+def summarize_text():
+    if request.method != 'POST':
+        return jsonify({"message": "Method Not Allowed!"}), 405
+
+    data = request.json
+    textData = data.get('textData')
+
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {
+                "role": "system",
+                "content": f"Summarize the following text with context: '{textData}'"
+            }
+        ],
+        max_tokens=2000,
+        temperature=0.0
+    )
+
+    summarized_text = response.choices[0].message.content
+    return make_response(jsonify(summarized_text), 200)
