@@ -14,6 +14,7 @@ def generate_tf_question():
     data = request.json
     quizData = data.get('quizData')
     numberOfQuestions = data.get("numberOfQuestions")
+    difficultyLevel = data.get("difficultyLevel")
 
     quizResponse = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
@@ -21,7 +22,9 @@ def generate_tf_question():
             {
                 "role": "system",
                 "content": f"Generate a true or false quiz with {numberOfQuestions} questions "
-                           f"based on this information: '{quizData}'. Each question will have an answer of T or F, "
+                           f"based on this information: '{quizData}'. "
+                           f"The difficulty of the questions should be {difficultyLevel}. "
+                           f"Each question will have an answer of T or F, "
                            f"do not write out the whole word only use the letter. "
                            f"The format of each question should be as follows and nothing else:\n"
                            "1. [insert question text]\n"
@@ -64,6 +67,7 @@ def generate_mc_question():
     data = request.json
     quizData = data.get('quizData')
     numberOfQuestions = data.get("numberOfQuestions")
+    difficultyLevel = data.get("difficultyLevel")
 
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
@@ -72,6 +76,7 @@ def generate_mc_question():
                 "role": "system",
                 "content": f"Generate a multiple choice quiz with {numberOfQuestions} questions "
                            f"based on this information: '{quizData}'. "
+                           f"The difficulty of the questions should be {difficultyLevel}. "
                            f"The format of the Answer should be a single letter and nothing else.\n"
                            f"The format of each question should be as follows and nothing else: "
                            f"1. [insert question text]\n"
