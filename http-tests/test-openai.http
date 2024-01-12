@@ -42,3 +42,21 @@ Content-Type: application/json
   "quizData": "ice cream",
   "numberOfKeyPoints": 5
 }
+
+### generate an image
+POST http://127.0.0.1:5000/api/ai-generate/create-image
+Content-Type: application/json
+
+{
+  "imageQuery": "ford mustang"
+}
+
+### generate a quiz and stream the response
+POST http://127.0.0.1:5000/api/ai-generate/stream
+Content-Type: application/json
+
+{
+  "quizData": "sparkling water",
+  "numberOfQuestions": 2,
+  "quizType": "mc"
+}

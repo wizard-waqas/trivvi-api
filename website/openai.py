@@ -5,9 +5,60 @@ import re
 generate_quiz = Blueprint("generatequiz", __name__)
 openai.api_key = "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"
 
+JSON_FORMAT_MC = (
+    """
+    {
+        "questions": [
+            {
+            
+                "query": "question 1",
+                "answers": [
+                    "A. answer choice 1",
+                    "B. answer choice 2",
+                    "C. answer choice 3",
+                    "D. answer choice 4"
+                ]
+            },
+            {
+                "query": "question 2",
+                "answers": [
+                    "A. answer choice 1",
+                    "B. answer choice 2",
+                    "C. answer choice 3",
+                    "D. answer choice 4"
+                ]
+            },
+            ...
+        ],
+        "answerKey": ["insert A B C or D", ...]
+    }
+    """
+)
+
+JSON_FORMAT_TF = (
+    """
+    {
+        "questions": [
+            {
+                "query": "question 1",
+            },
+            {
+                "query": "question 1",
+            },
+            ...
+        ],
+        "answerKey": ["insert T or F", ...]
+    }
+    """
+)
+
 
 @generate_quiz.post("/tf")
 def generate_tf_question():
+    """
+    Generate a true or false quiz based on the information provided
+    :return: JSON response following the schema of this variable: JSON_FORMAT_TF
+    """
     if request.method != "POST":
         return jsonify({"message": "Method Not Allowed!"}), 405
 
@@ -22,13 +73,13 @@ def generate_tf_question():
             {
                 "role": "system",
                 "content": f"Generate a true or false quiz with {numberOfQuestions} questions "
-                f"based on this information: '{quizData}'. "
-                f"The difficulty of the questions should be {difficultyLevel}. "
-                f"Each question will have an answer of T or F, "
-                f"do not write out the whole word only use the letter. "
-                f"The format of each question should be as follows and nothing else:\n"
-                "1. [insert question text]\n"
-                "Answer: [insert T or F]\n",
+                           f"based on this information: '{quizData}'. "
+                           f"The difficulty of the questions should be {difficultyLevel}. "
+                           f"Each question will have an answer of T or F, "
+                           f"do not write out the whole word only use the letter. "
+                           f"The format of each question should be as follows and nothing else:\n"
+                           "1. [insert question text]\n"
+                           "Answer: [insert T or F]\n",
             }
         ],
         max_tokens=2000,
@@ -61,6 +112,10 @@ def generate_tf_question():
 
 @generate_quiz.post("/mc")
 def generate_mc_question():
+    """
+    Generate a multiple choice quiz based on the information provided
+    :return: JSON response following the schema of this variable: JSON_FORMAT_MC
+    """
     if request.method != "POST":
         return jsonify({"message": "Method Not Allowed!"}), 405
 
@@ -75,16 +130,16 @@ def generate_mc_question():
             {
                 "role": "system",
                 "content": f"Generate a multiple choice quiz with {numberOfQuestions} questions "
-                f"based on this information: '{quizData}'. "
-                f"The difficulty of the questions should be {difficultyLevel}. "
-                f"The format of the Answer should be a single letter and nothing else.\n"
-                f"The format of each question should be as follows and nothing else: "
-                f"1. [insert question text]\n"
-                f"A. [insert answer choice 1]\n"
-                f"B. [insert answer choice 2]\n"
-                f"C. [insert answer choice 3]\n"
-                f"D. [insert answer choice 4]\n"
-                f"Answer: [insert A B C or D]\n",
+                           f"based on this information: '{quizData}'. "
+                           f"The difficulty of the questions should be {difficultyLevel}. "
+                           f"The format of the Answer should be a single letter and nothing else.\n"
+                           f"The format of each question should be as follows and nothing else: "
+                           f"1. [insert question text]\n"
+                           f"A. [insert answer choice 1]\n"
+                           f"B. [insert answer choice 2]\n"
+                           f"C. [insert answer choice 3]\n"
+                           f"D. [insert answer choice 4]\n"
+                           f"Answer: [insert A B C or D]\n",
             }
         ],
         max_tokens=2000,
@@ -120,6 +175,10 @@ def generate_mc_question():
 
 @generate_quiz.post("/key-points")
 def generate_key_points():
+    """
+    Generate a list of key points based on the information provided
+    CURRENTLY DEPRECATED
+    """
     if request.method != "POST":
         return jsonify({"message": "Method Not Allowed!"}), 405
 
@@ -149,6 +208,9 @@ def generate_key_points():
 
 @generate_quiz.post("/summarize")
 def summarize_text():
+    """
+    Summarize a text based on the information provided
+    """
     if request.method != "POST":
         return jsonify({"message": "Method Not Allowed!"}), 405
 
@@ -171,12 +233,30 @@ def summarize_text():
     return make_response(jsonify(summarized_text), 200)
 
 
-@generate_quiz.post("/stream")
-def test_stream():
+@generate_quiz.post("/create-image")
+def create_image():
+    if request.method != 'POST':
+        return jsonify({"message": "Method Not Allowed!"}), 405
+
+    data = request.json
+    image_query = data.get('imageQuery')
+
+    response = openai.Image.create(
+        model="dall-e-3",
+        prompt=f"DO NOT add any detail to this prompt, just use it AS-IS: Generate a profile picture without any letters in a flat and simple art style of {image_query}",
+        size="1024x1024",
+        quality="standard",
+    )
+    image_url = response['data'][0]['url']
+    return {"imageUrl": image_url}
+
+
+@generate_quiz.post("/generate-quiz-stream")
+def generate_quiz_as_stream():
     if request.method != "POST":
         return jsonify({"message": "Method Not Allowed!"}), 405
 
-    if not (request.data):
+    if not request.data:
         return jsonify({"message": "Invalid JSON"}), 400
 
     data = request.json
@@ -184,60 +264,57 @@ def test_stream():
     quizType = data.get("quizType")
     quizData = data.get("quizData")
     numberOfQuestions = data.get("numberOfQuestions")
-    difficultyLevel = data.get("difficultyLevel")
-
     message = ""
 
     if quizType == "tf":
         message = (
-            f"Generate a true and false quiz with {numberOfQuestions} questions based on the topic of {quizData}. "
-            f"The difficulty of the questions should be {difficultyLevel}. The response must be json objects separated by commas and not in an array. "
-            f"The json object must have a field called question with the question, field called answers with a list of True and False, and a field called answer with the correct answer. "
-            f"There should not be anything else in the response."
+            f"Generate a true and false quiz with {numberOfQuestions} questions based on this information {quizData}. "
+            f"The JSON response should follow this format: {JSON_FORMAT_TF}"
         )
     elif quizType == "mc":
         message = (
-            f"Generate a multiple choice quiz with {numberOfQuestions} questions based on the topic of {quizData}. "
-            f"The difficulty of the questions should be {difficultyLevel}. The response must be json objects separated by commas and not in an array. "
-            f"The json object must have a field called question with the question, field called answers with a total of 4 answers, and a field called answer with the correct answer. "
-            f"There should not be anything else in the response."
+            f"Generate a multiple choice quiz with {numberOfQuestions} questions based on this information {quizData}. "
+            f"The JSON response should follow this format: {JSON_FORMAT_MC}"
         )
     else:
         return jsonify({"message": "Invalid quiz type"}), 400
 
-    def event_stream():
-        data = ""
-        for line in stream_messages(message):
-            text = line.choices[0].delta.get("content", "")
+    return Response(event_stream(message), mimetype="text/event-stream")
 
-            if len(text):
-                if "}" in text:
-                    split = text.split("}")
-                    data += split[0] + "}"
-                    yield f"{data}"
-                    print(data)
-                    data = split[1]
 
-                    if len(data) > 0 and data[0] == ",":
-                        data = data[1:]
-                    else:
-                        data = ""
+def event_stream(message):
+    data = ""
+    for line in generate_streamed_completion(message):
+        text = line.choices[0].delta.get("content", "")
+
+        if len(text):
+            if "}" in text:
+                split = text.split("}")
+                data += split[0] + "}"
+                yield f"{data}"
+                print(data)
+                data = split[1]
+
+                if len(data) > 0 and data[0] == ",":
+                    data = data[1:]
                 else:
-                    data += text
+                    data = ""
+            else:
+                data += text
 
-    return Response(event_stream(), mimetype="text/event-stream")
 
-
-def stream_messages(message: str):
+def generate_streamed_completion(message: str):
     return openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+        model="gpt-3.5-turbo-1106",
+        response_format={"type": "json_object"},
         messages=[
+            {"role": "system", "content": "You are a helpful assistant designed to output JSON."},
             {
-                "role": "system",
+                "role": "user",
                 "content": message,
             },
         ],
         stream=True,
         max_tokens=2000,
-        temperature=0.0,
+        temperature=0.3,
     )
