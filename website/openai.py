@@ -1,3 +1,4 @@
+import time
 from flask import Blueprint, Response, request, jsonify, make_response, stream_template
 import openai
 import re
@@ -5,52 +6,8 @@ import re
 generate_quiz = Blueprint("generatequiz", __name__)
 openai.api_key = "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"
 
-JSON_FORMAT_MC = (
-    """
-    {
-        "questions": [
-            {
-            
-                "query": "question 1",
-                "answers": [
-                    "A. answer choice 1",
-                    "B. answer choice 2",
-                    "C. answer choice 3",
-                    "D. answer choice 4"
-                ]
-            },
-            {
-                "query": "question 2",
-                "answers": [
-                    "A. answer choice 1",
-                    "B. answer choice 2",
-                    "C. answer choice 3",
-                    "D. answer choice 4"
-                ]
-            },
-            ...
-        ],
-        "answerKey": ["insert A B C or D", ...]
-    }
-    """
-)
-
-JSON_FORMAT_TF = (
-    """
-    {
-        "questions": [
-            {
-                "query": "question 1",
-            },
-            {
-                "query": "question 1",
-            },
-            ...
-        ],
-        "answerKey": ["insert T or F", ...]
-    }
-    """
-)
+JSON_FORMAT_MC = """{"query":"The question","answers":["A. Choice 1","B. Choice 2","C. Choice 3","D. Choice 4"],"answer_key":"The correct answer (A, B, C or D)"}"""
+JSON_FORMAT_TF = """{"query":"The question","answers":["T","F"],"answer_key":"The correct answer (T or F)"}"""
 
 
 @generate_quiz.post("/tf")
@@ -73,13 +30,13 @@ def generate_tf_question():
             {
                 "role": "system",
                 "content": f"Generate a true or false quiz with {numberOfQuestions} questions "
-                           f"based on this information: '{quizData}'. "
-                           f"The difficulty of the questions should be {difficultyLevel}. "
-                           f"Each question will have an answer of T or F, "
-                           f"do not write out the whole word only use the letter. "
-                           f"The format of each question should be as follows and nothing else:\n"
-                           "1. [insert question text]\n"
-                           "Answer: [insert T or F]\n",
+                f"based on this information: '{quizData}'. "
+                f"The difficulty of the questions should be {difficultyLevel}. "
+                f"Each question will have an answer of T or F, "
+                f"do not write out the whole word only use the letter. "
+                f"The format of each question should be as follows and nothing else:\n"
+                "1. [insert question text]\n"
+                "Answer: [insert T or F]\n",
             }
         ],
         max_tokens=2000,
@@ -130,16 +87,16 @@ def generate_mc_question():
             {
                 "role": "system",
                 "content": f"Generate a multiple choice quiz with {numberOfQuestions} questions "
-                           f"based on this information: '{quizData}'. "
-                           f"The difficulty of the questions should be {difficultyLevel}. "
-                           f"The format of the Answer should be a single letter and nothing else.\n"
-                           f"The format of each question should be as follows and nothing else: "
-                           f"1. [insert question text]\n"
-                           f"A. [insert answer choice 1]\n"
-                           f"B. [insert answer choice 2]\n"
-                           f"C. [insert answer choice 3]\n"
-                           f"D. [insert answer choice 4]\n"
-                           f"Answer: [insert A B C or D]\n",
+                f"based on this information: '{quizData}'. "
+                f"The difficulty of the questions should be {difficultyLevel}. "
+                f"The format of the Answer should be a single letter and nothing else.\n"
+                f"The format of each question should be as follows and nothing else: "
+                f"1. [insert question text]\n"
+                f"A. [insert answer choice 1]\n"
+                f"B. [insert answer choice 2]\n"
+                f"C. [insert answer choice 3]\n"
+                f"D. [insert answer choice 4]\n"
+                f"Answer: [insert A B C or D]\n",
             }
         ],
         max_tokens=2000,
@@ -235,11 +192,11 @@ def summarize_text():
 
 @generate_quiz.post("/create-image")
 def create_image():
-    if request.method != 'POST':
+    if request.method != "POST":
         return jsonify({"message": "Method Not Allowed!"}), 405
 
     data = request.json
-    image_query = data.get('imageQuery')
+    image_query = data.get("imageQuery")
 
     response = openai.Image.create(
         model="dall-e-3",
@@ -247,7 +204,7 @@ def create_image():
         size="1024x1024",
         quality="standard",
     )
-    image_url = response['data'][0]['url']
+    image_url = response["data"][0]["url"]
     return {"imageUrl": image_url}
 
 
@@ -264,22 +221,36 @@ def generate_quiz_as_stream():
     quizType = data.get("quizType")
     quizData = data.get("quizData")
     numberOfQuestions = data.get("numberOfQuestions")
-    message = ""
+    message = generate_quiz_prompt(quizType, numberOfQuestions, quizData)
 
-    if quizType == "tf":
-        message = (
-            f"Generate a true and false quiz with {numberOfQuestions} questions based on this information {quizData}. "
-            f"The JSON response should follow this format: {JSON_FORMAT_TF}"
-        )
-    elif quizType == "mc":
-        message = (
-            f"Generate a multiple choice quiz with {numberOfQuestions} questions based on this information {quizData}. "
-            f"The JSON response should follow this format: {JSON_FORMAT_MC}"
-        )
-    else:
+    if not message:
         return jsonify({"message": "Invalid quiz type"}), 400
 
-    return Response(event_stream(message), mimetype="text/event-stream")
+    return Response(
+        event_stream(message),
+        mimetype="text/event-stream",
+        headers={"Connection": "keep-alive"},
+    )
+
+
+def generate_quiz_prompt(quizType, numberOfQuestions, quizData):
+    quiz = ""
+    jsonFormat = ""
+
+    if quizType == "tf":
+        quiz = "true and false"
+        jsonFormat = JSON_FORMAT_TF
+    elif quizType == "mc":
+        quiz = "multiple choice"
+        jsonFormat = JSON_FORMAT_MC
+    else:
+        return None
+
+    return (
+        f"Generate a {quiz} quiz with {numberOfQuestions} questions based on this information {quizData} and any supporting infomration you may need. "
+        f"Each question must follow this format: {jsonFormat}. "
+        f"The response should be these objects separated by a comma and nothing else."
+    )
 
 
 def event_stream(message):
@@ -291,8 +262,9 @@ def event_stream(message):
             if "}" in text:
                 split = text.split("}")
                 data += split[0] + "}"
-                yield f"{data}"
+                data.replace("\n", "")
                 print(data)
+                yield f"data: {data} \n\n"
                 data = split[1]
 
                 if len(data) > 0 and data[0] == ",":
@@ -305,12 +277,10 @@ def event_stream(message):
 
 def generate_streamed_completion(message: str):
     return openai.ChatCompletion.create(
-        model="gpt-3.5-turbo-1106",
-        response_format={"type": "json_object"},
+        model="gpt-3.5-turbo",
         messages=[
-            {"role": "system", "content": "You are a helpful assistant designed to output JSON."},
             {
-                "role": "user",
+                "role": "system",
                 "content": message,
             },
         ],
