@@ -210,6 +210,9 @@ def create_image():
 
 @generate_quiz.post("/generate-quiz-stream")
 def generate_quiz_as_stream():
+    """
+    Generate a quiz prompt and stream the response as it is being generated
+    """
     if request.method != "POST":
         return jsonify({"message": "Method Not Allowed!"}), 405
 
@@ -229,11 +232,19 @@ def generate_quiz_as_stream():
     return Response(
         event_stream(message),
         mimetype="text/event-stream",
-        headers={"Connection": "keep-alive"},
+        headers={"Connection": "keep-alive", "Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 
 def generate_quiz_prompt(quizType, numberOfQuestions, quizData):
+    """
+    generate a prompt for the quiz to feed into OpenAI API
+    :param quizType:
+    :param numberOfQuestions:
+    :param quizData:
+    :return:
+    """
+
     quiz = ""
     jsonFormat = ""
 
@@ -254,6 +265,12 @@ def generate_quiz_prompt(quizType, numberOfQuestions, quizData):
 
 
 def event_stream(message):
+    """
+    Stream the response from the OpenAI API as it is being generated
+    look for the end of a JSON object and yield the data up to that point
+    :param message: the prompt to send to the OpenAI API
+    :return:
+    """
     data = ""
     for line in generate_streamed_completion(message):
         text = line.choices[0].delta.get("content", "")
@@ -276,6 +293,10 @@ def event_stream(message):
 
 
 def generate_streamed_completion(message: str):
+    """
+    Generate a completion from the OpenAI API and stream the response
+    """
+
     return openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[

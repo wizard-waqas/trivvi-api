@@ -12,7 +12,7 @@ def create_app():
     """ create a flask app  """
     app = Flask(__name__)
 
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    CORS(app, origins=["http://localhost:3000", "https://trivvi-dev.vercel.app", "https://trivvi.ai"])
     app.secret_key = 'ib90rcf42r768bxf67g8t6kn907v0k9n34x'
 
     app.register_blueprint(youtube, url_prefix="/api/youtube")

@@ -1,0 +1,47 @@
+# /api/ai-generate
+
+### generate a true false quiz from localhost, 1.5 seconds to generate each question
+POST http://127.0.0.1:5000/api/ai-generate/tf
+Content-Type: application/json
+
+{
+  "quizData": "ice cream",
+  "numberOfQuestions": 4
+}
+
+### generate a multiple choice quiz from localhost, 3 seconds to generate each question
+POST http://127.0.0.1:5000/api/ai-generate/mc
+Content-Type: application/json
+
+{
+  "quizData": "ice cream",
+  "numberOfQuestions": 6
+}
+
+### generate an image
+POST http://127.0.0.1:5000/api/ai-generate/create-image
+Content-Type: application/json
+
+{
+  "imageQuery": "ford mustang"
+}
+
+### generate a quiz and stream the response
+POST http://127.0.0.1:5000/api/ai-generate/generate-quiz-stream
+Content-Type: application/json
+
+{
+  "quizData": "sparkling water",
+  "numberOfQuestions": 2,
+  "quizType": "mc"
+}
+
+##### deprecated
+### generate n key points about a given topic, takes 1.6 seconds to generate each key point
+POST http://127.0.0.1:5000/api/ai-generate/key-points
+Content-Type: application/json
+
+{
+  "quizData": "ice cream",
+  "numberOfKeyPoints": 5
+}
