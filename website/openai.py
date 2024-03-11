@@ -208,6 +208,26 @@ def create_image():
     return {"imageUrl": image_url}
 
 
+"""
+Currently the below function `generate_quiz_as_stream` is not being used on dev or production. 
+The below code works locally, but as soon as it is deployed on the server (google cloud platform) 
+it does not stream the response. It only sends one response and then stops which should not be the case (min 3 responses should be sent).
+
+Tried the following things to resolve this issue but to no avail:
+1. Set the `X-Accel-Buffering` to `no` in the headers
+2. Set the `Connection` to `keep-alive` in the headers
+3. Set the `Cache-Control` to `no-cache` in the headers
+4. Messed with some configurations on google cloud platform which did not work
+
+
+There is not much documentation on how to successfully stream responses from a google cloud platform server 
+but here are some future suggestions to try and resolve this issue:
+1. Try using a WSGI to run the server or guinicorn
+2. Try using a different library to stream the response
+3. Try a different cloud platform
+"""
+
+
 @generate_quiz.post("/generate-quiz-stream")
 def generate_quiz_as_stream():
     """
@@ -224,15 +244,22 @@ def generate_quiz_as_stream():
     quizType = data.get("quizType")
     quizData = data.get("quizData")
     numberOfQuestions = data.get("numberOfQuestions")
+
+    # Generate a prompt for the quiz depending on the type of quiz
     message = generate_quiz_prompt(quizType, numberOfQuestions, quizData)
 
     if not message:
         return jsonify({"message": "Invalid quiz type"}), 400
 
+    # Stream the response from the OpenAI API
     return Response(
         event_stream(message),
         mimetype="text/event-stream",
-        headers={"Connection": "keep-alive", "Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        headers={
+            "Connection": "keep-alive",
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 
@@ -275,6 +302,11 @@ def event_stream(message):
     for line in generate_streamed_completion(message):
         text = line.choices[0].delta.get("content", "")
 
+        """
+        Every time a JSON object is fully formed, it yields the data then resets the data to nothing
+        This works by looking for the last "}" in the response, then forming a json object
+        After the response from the OpenAI API is fully complete, it will stop yielding data
+        """
         if len(text):
             if "}" in text:
                 split = text.split("}")
